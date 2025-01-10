@@ -203,20 +203,24 @@ function extractEndgameStats(buildsTab, $) {
         return endgameStats;
     }
 
-    const statItems = statsContainer.find("li");
+    const statItems = statsContainer.find("> li");
 
     statItems.each((i, statItem) => {
-        const pTag = $(statItem).find("p");
-        if (!pTag.length) return;
+        let text = $(statItem).text().trim();
 
-        const text = pTag.text().replace(/<!-- -->/g, "").trim(); // Remove HTML comments and trim whitespace
-        const parts = text.split(':');
-        if (parts.length === 2) {
-            const statName = parts[0].trim();
-            const statValue = parts[1].trim();
-
-            // Check if statValue contains any digits to avoid capturing list item text without values
-            if (/\d/.test(statValue)) {
+        // Handle cases where there's no colon (e.g., "CRIT DMG%")
+        if (!text.includes(':')) {
+            const parts = text.match(/(.+?)(\d+-\d+%)/); // Match stat name and value
+            if (parts && parts.length === 3) {
+                endgameStats[parts[1].trim()] = parts[2].trim();
+            }
+        } else {
+            // Handle cases with a colon separator
+            text = text.replace(/<!--[\s\S]*?-->/g, ""); // Remove HTML comments
+            const parts = text.split(":");
+            if (parts.length === 2) {
+                const statName = parts[0].trim();
+                const statValue = parts[1].trim();
                 endgameStats[statName] = statValue;
             }
         }
