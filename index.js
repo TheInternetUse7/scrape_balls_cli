@@ -8,18 +8,17 @@ async function extractData(url) {
         const html = response.data;
         const $ = cheerio.load(html);
 
-        // Target the "Builds" tab content directly (it's the 13th div.tab-inside)
         const buildsTab = $("div.tab-inside:nth-child(13)");
 
         if (!buildsTab.length) {
             throw new Error("Builds tab not found!");
         }
 
-        const weaponData = extractWeaponBuilds(buildsTab);
-        const echoSetsData = extractEchoSetBuilds(buildsTab);
-        const echoStatsData = extractEchoStats(buildsTab);
-        const substatPriorityData = extractSubstatPriority(buildsTab);
-        const endgameStatsData = extractEndgameStats(buildsTab);
+        const weaponData = extractWeaponBuilds(buildsTab, $);
+        const echoSetsData = extractEchoSetBuilds(buildsTab, $);
+        const echoStatsData = extractEchoStats(buildsTab, $);
+        const substatPriorityData = extractSubstatPriority(buildsTab, $);
+        const endgameStatsData = extractEndgameStats(buildsTab, $);
 
         const allData = {
             weaponBuilds: weaponData,
@@ -36,7 +35,7 @@ async function extractData(url) {
     }
 }
 
-function extractWeaponBuilds(buildsTab) {
+function extractWeaponBuilds(buildsTab, $) {
     const weaponBuilds = [];
     const weaponsSection = buildsTab.find(".build-tips");
 
@@ -70,9 +69,11 @@ function extractWeaponBuilds(buildsTab) {
     return weaponBuilds;
 }
 
-function extractEchoSetBuilds(buildsTab) {
+function extractEchoSetBuilds(buildsTab, $) {
     const echoSetBuilds = [];
-    const echoSetsSection = buildsTab.find("div.build-tips:has(div.ww-set-accordion)");
+    const echoSetsSection = buildsTab.find(
+        "div.build-tips:has(div.ww-set-accordion)"
+    );
 
     if (!echoSetsSection.length) {
         console.error("Echo Sets section not found.");
@@ -98,7 +99,9 @@ function extractEchoSetBuilds(buildsTab) {
                 .trim()
             : "";
 
-        const echoNameElement = $(echoSetItem).parent().find(".information ul li .ww-echo-name");
+        const echoNameElement = $(echoSetItem)
+            .parent()
+            .find(".information ul li .ww-echo-name");
         const echoName = echoNameElement.length
             ? echoNameElement.text().trim()
             : "";
@@ -113,7 +116,7 @@ function extractEchoSetBuilds(buildsTab) {
     return echoSetBuilds;
 }
 
-function extractEchoStats(buildsTab) {
+function extractEchoStats(buildsTab, $) {
     const echoStats = [];
     const statsSections = buildsTab.find("h6:has(+ .main-stats)");
 
@@ -132,7 +135,7 @@ function extractEchoStats(buildsTab) {
             const statNames = $(box)
                 .find(".ww-stat > span")
                 .map((k, span) => $(span).text().trim())
-                .get(); // .get() is important to convert to a regular array
+                .get();
 
             if (stats[cost]) {
                 stats[cost] = stats[cost].concat(statNames);
@@ -150,7 +153,7 @@ function extractEchoStats(buildsTab) {
     return echoStats;
 }
 
-function extractSubstatPriority(buildsTab) {
+function extractSubstatPriority(buildsTab, $) {
     let substatPriority = "";
     const substatElement = buildsTab.find(".sub-stats p");
 
@@ -163,7 +166,7 @@ function extractSubstatPriority(buildsTab) {
     return substatPriority;
 }
 
-function extractEndgameStats(buildsTab) {
+function extractEndgameStats(buildsTab, $) {
     const endgameStats = {};
     const endgameStatsHeader = buildsTab.find("div.content-header");
 
@@ -204,7 +207,13 @@ async function main() {
     const extractedData = await extractData(characterUrl);
 
     if (extractedData) {
-        const outputFilename = "output.json";
+        // Create the "_" directory if it doesn't exist
+        const outputDir = "./_"; // Relative path to the "_" directory
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir);
+        }
+
+        const outputFilename = "_/output.json"; // Path within the "_" directory
         fs.writeFileSync(
             outputFilename,
             JSON.stringify(extractedData, null, 2)
