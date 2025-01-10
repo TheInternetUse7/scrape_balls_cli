@@ -57,7 +57,7 @@ async function extractData(characterName) {
 
 function extractWeaponBuilds(buildsTab, $) {
     const weaponBuilds = [];
-    const weaponsSection = buildsTab.find(".build-tips");
+    const weaponsSection = buildsTab.find(".build-tips").first();
 
     if (!weaponsSection.length) {
         console.error("Weapons section not found.");
@@ -79,21 +79,20 @@ function extractWeaponBuilds(buildsTab, $) {
         const weaponName = weaponNameParts ? weaponNameParts[1].trim() : "";
         const weaponDuplicates = weaponNameParts ? weaponNameParts[2] : "";
 
-        weaponBuilds.push({
-            name: weaponName,
-            duplicates: weaponDuplicates,
-            percentage: percentage,
-        });
+        if (weaponName && weaponDuplicates) {
+            weaponBuilds.push({
+                name: weaponName,
+                duplicates: weaponDuplicates,
+                percentage: percentage,
+            });
+        }
     });
-
     return weaponBuilds;
 }
 
 function extractEchoSetBuilds(buildsTab, $) {
     const echoSetBuilds = [];
-    const echoSetsSection = buildsTab.find(
-        "div.build-tips:has(div.ww-set-accordion)"
-    );
+    const echoSetsSection = buildsTab.find("div.build-tips").last();
 
     if (!echoSetsSection.length) {
         console.error("Echo Sets section not found.");
@@ -101,7 +100,6 @@ function extractEchoSetBuilds(buildsTab, $) {
     }
 
     const echoSetItems = echoSetsSection.find(".single-item");
-
     echoSetItems.each((i, echoSetItem) => {
         const percentageElement = $(echoSetItem).find(".percentage p");
         const percentage = percentageElement.length
@@ -119,18 +117,19 @@ function extractEchoSetBuilds(buildsTab, $) {
                 .trim()
             : "";
 
-        const echoNameElement = $(echoSetItem)
-            .parent()
-            .find(".information ul li .ww-echo-name");
-        const echoName = echoNameElement.length
-            ? echoNameElement.text().trim()
-            : "";
+        let echoName = "";
+        const echoNameElement = $(echoSetItem).next('.information').find("ul.ww-echo-list li .ww-echo-name");
+        if (echoNameElement.length > 0) {
+            echoName = echoNameElement.map((i, el) => $(el).text().trim()).get().join(", ");
+        }
 
-        echoSetBuilds.push({
-            percentage: percentage,
-            setName: setName,
-            echoName: echoName,
-        });
+        if (percentage || setName || echoName) {
+            echoSetBuilds.push({
+                percentage: percentage,
+                setName: setName,
+                echoName: echoName,
+            });
+        }
     });
 
     return echoSetBuilds;
@@ -188,16 +187,16 @@ function extractSubstatPriority(buildsTab, $) {
 
 function extractEndgameStats(buildsTab, $) {
     const endgameStats = {};
-    const endgameStatsHeader = buildsTab.find("div.content-header");
+    const endgameStatsHeader = buildsTab.find("div.content-header").filter(function () {
+        return $(this).text().trim() === 'Best Endgame Stats (Level 90)';
+    });
 
     if (!endgameStatsHeader.length) {
         console.error("Endgame stats section not found.");
         return endgameStats;
     }
 
-    const statsContainer = endgameStatsHeader
-        .parent()
-        .find("div.box.review.raw > ul");
+    const statsContainer = endgameStatsHeader.closest('.tab-inside').find("div.box.review.raw > ul");
 
     if (!statsContainer.length) {
         console.error("Endgame stats list not found.");
@@ -210,11 +209,16 @@ function extractEndgameStats(buildsTab, $) {
         const pTag = $(statItem).find("p");
         if (!pTag.length) return;
 
-        const parts = pTag.text().replace(/<!-- -->/g, "").split(":");
+        const text = pTag.text().replace(/<!-- -->/g, "").trim(); // Remove HTML comments and trim whitespace
+        const parts = text.split(':');
         if (parts.length === 2) {
             const statName = parts[0].trim();
             const statValue = parts[1].trim();
-            endgameStats[statName] = statValue;
+
+            // Check if statValue contains any digits to avoid capturing list item text without values
+            if (/\d/.test(statValue)) {
+                endgameStats[statName] = statValue;
+            }
         }
     });
 
