@@ -2,17 +2,23 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const fs = require("fs");
 
-async function extractData(url) {
+async function extractData(characterName) {
     try {
+        const url = `https://www.prydwen.gg/wuthering-waves/characters/${characterName}`;
+        console.log(`Fetching HTML from ${url}...`);
         const response = await axios.get(url);
         const html = response.data;
+        console.log("HTML fetched successfully.");
+
         const $ = cheerio.load(html);
+        console.log("HTML loaded into Cheerio.");
 
         const buildsTab = $("div.tab-inside:nth-child(13)");
 
         if (!buildsTab.length) {
             throw new Error("Builds tab not found!");
         }
+        console.log("Builds tab found.");
 
         const weaponData = extractWeaponBuilds(buildsTab, $);
         const echoSetsData = extractEchoSetBuilds(buildsTab, $);
@@ -31,6 +37,12 @@ async function extractData(url) {
         return allData;
     } catch (error) {
         console.error("Error during extraction:", error.message);
+        if (error.response) {
+            console.error("Response status:", error.response.status);
+            console.error("Response data:", error.response.data);
+        } else if (error.request) {
+            console.error("No response received:", error.request);
+        }
         return null;
     }
 }
@@ -202,22 +214,23 @@ function extractEndgameStats(buildsTab, $) {
 }
 
 async function main() {
-    const characterUrl =
-        "https://www.prydwen.gg/wuthering-waves/characters/jinhsi";
-    const extractedData = await extractData(characterUrl);
+    const characterName = process.argv[2]; // Get character name from command-line arguments
+
+    if (!characterName) {
+        console.error("Please provide a character name as a command-line argument.");
+        return;
+    }
+
+    const extractedData = await extractData(characterName);
 
     if (extractedData) {
-        // Create the "_" directory if it doesn't exist
-        const outputDir = "./_"; // Relative path to the "_" directory
+        const outputDir = "./_";
         if (!fs.existsSync(outputDir)) {
             fs.mkdirSync(outputDir);
         }
 
-        const outputFilename = "_/output.json"; // Path within the "_" directory
-        fs.writeFileSync(
-            outputFilename,
-            JSON.stringify(extractedData, null, 2)
-        );
+        const outputFilename = `${outputDir}/${characterName}.json`; // Use character name in filename
+        fs.writeFileSync(outputFilename, JSON.stringify(extractedData, null, 2));
         console.log(`Data extracted and saved to ${outputFilename}`);
     }
 }
