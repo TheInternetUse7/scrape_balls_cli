@@ -36,12 +36,20 @@ async function extractData(characterName) {
 
         return allData;
     } catch (error) {
-        console.error("Error during extraction:", error.message);
+        console.error(`Error during extraction for ${characterName}:`);
         if (error.response) {
-            console.error("Response status:", error.response.status);
-            console.error("Response data:", error.response.data);
+            if (error.response.status === 404) {
+                console.error(
+                    `  Character "${characterName}" not found (404 error).`
+                );
+            } else {
+                console.error("  Response status:", error.response.status);
+                console.error("  Response data:", error.response.data);
+            }
         } else if (error.request) {
-            console.error("No response received:", error.request);
+            console.error("  No response received:", error.request);
+        } else {
+            console.error("  ", error.message);
         }
         return null;
     }
