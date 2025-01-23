@@ -203,26 +203,45 @@ function extractEndgameStats(buildsTab, $) {
         return endgameStats;
     }
 
-    const statItems = statsContainer.find("> li");
+    const statItems = statsContainer.find("> li"); // Only select direct children li
 
     statItems.each((i, statItem) => {
-        let text = $(statItem).text().trim();
+        const pTag = $(statItem).find("> p"); // Only consider the direct p tag within the li
+        if (!pTag.length) return;
 
-        // Handle cases where there's no colon (e.g., "CRIT DMG%")
-        if (!text.includes(':')) {
-            const parts = text.match(/(.+?)(\d+-\d+%)/); // Match stat name and value
-            if (parts && parts.length === 3) {
-                endgameStats[parts[1].trim()] = parts[2].trim();
+        // Remove HTML comments
+        let text = pTag.html().replace(/<!--[\s\S]*?-->/g, "").trim();
+
+        // Handle special cases and extract statName and statValue
+        let statName = "";
+        let statValue = "";
+
+        if (text.includes("CRIT DMG%")) {
+            statName = "CRIT DMG%";
+            statValue = text.match(/<b>([\d\-+%]+)<\/b>/)[1];
+        } else if (text.includes("Energy Regeneration")) {
+            statName = "Energy Regeneration";
+            const valueMatch = text.match(/<b>([\d\-+%]+)<\/b>/);
+            if (valueMatch) {
+                statValue = valueMatch[1];
+                let description = "";
+                const nextPTag = pTag.next('ul').find('li p');
+                if (nextPTag.length > 0) {
+                    description = nextPTag.text().trim();
+                }
+                endgameStats["description"] = description;
             }
-        } else {
-            // Handle cases with a colon separator
-            text = text.replace(/<!--[\s\S]*?-->/g, ""); // Remove HTML comments
+        } else if (text.includes(":")) {
             const parts = text.split(":");
             if (parts.length === 2) {
-                const statName = parts[0].trim();
-                const statValue = parts[1].trim();
-                endgameStats[statName] = statValue;
+                statName = parts[0].replace(/<[^>]+>/g, '').trim(); // Remove any residual HTML tags from name
+                statValue = parts[1].replace(/<[^>]+>/g, '').trim();
             }
+        }
+
+        // Add stat to object if both name and value are present
+        if (statName && statValue) {
+            endgameStats[statName] = statValue;
         }
     });
 
