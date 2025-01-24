@@ -25,6 +25,7 @@ async function extractData(characterName) {
         const echoStatsData = extractEchoStats(buildsTab, $);
         const substatPriorityData = extractSubstatPriority(buildsTab, $);
         const endgameStatsData = extractEndgameStats(buildsTab, $);
+        const skillPriorityData = extractSkillPriority(buildsTab, $);
 
         const allData = {
             weaponBuilds: weaponData,
@@ -32,6 +33,7 @@ async function extractData(characterName) {
             echoStats: echoStatsData,
             substatPriority: substatPriorityData,
             endgameStats: endgameStatsData,
+            skillPriority: skillPriorityData
         };
 
         return allData;
@@ -246,6 +248,26 @@ function extractEndgameStats(buildsTab, $) {
     });
 
     return endgameStats;
+}
+function extractSkillPriority(buildsTab, $) {
+    const skillPriority = [];
+    const skillHeader = buildsTab.find("div.content-header").filter(function () {
+        return $(this).text().trim() === 'Skill Priority';
+    });
+
+    if (!skillHeader.length) {
+        console.error("Skill Priority section not found.");
+        return skillPriority;
+    }
+
+    const priorityContainer = skillHeader.nextAll(".skill-priority").first();
+    const skills = priorityContainer.find(".skill p");
+
+    skills.each((i, skill) => {
+        skillPriority.push($(skill).text().trim());
+    });
+
+    return skillPriority;
 }
 
 async function main() {
